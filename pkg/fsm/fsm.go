@@ -71,7 +71,7 @@ func (m *Machine[T]) FallbackTo(state State, target State) *Machine[T] {
 }
 
 func (m *Machine[T]) Run(ctx context.Context, data *T) ([]Transition, error) {
-	trace := make([]Transition, 0,  8)
+	trace := make([]Transition, 0, 8)
 	current := m.initial
 
 	for hops := 0; hops < m.maxHops; hops++ {
@@ -102,10 +102,10 @@ func (m *Machine[T]) Run(ctx context.Context, data *T) ([]Transition, error) {
 			fallback, ok := m.fallbacks[current]
 
 			if !ok {
-				trace = append(trace, t)
+				return trace, err
 			}
 
-			t.To = fallback
+			trace[len(trace)-1].To = fallback
 			next = fallback
 		}
 

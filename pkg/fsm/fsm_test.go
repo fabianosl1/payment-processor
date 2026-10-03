@@ -66,7 +66,6 @@ func TestRunHappyPath(t *testing.T) {
 	}
 }
 
-
 func TestFallbackKepsPipelineAvailable(t *testing.T) {
 	dependencyDown := errors.New("upstream timeout")
 	p := payload{}
@@ -104,8 +103,10 @@ func TestFallbackKepsPipelineAvailable(t *testing.T) {
 	if trace[1].Err == nil {
 		t.Error("expected trace[1].Err not nil")
 	}
+	if trace[1].To != "rules_only" {
+		t.Errorf("expected fallback transition to rules_only, got %q", trace[1].To)
+	}
 }
-
 
 func TestErrorWithoutFallbackAborts(t *testing.T) {
 	boom := errors.New("boom")
@@ -115,11 +116,16 @@ func TestErrorWithoutFallbackAborts(t *testing.T) {
 	}
 	m := fsm.New[payload]("start").Handle("start", handleStart).Terminal("done")
 
-	_, err := m.Run(context.Background(), &p)
+	trace, err := m.Run(context.Background(), &p)
 
 	if !errors.Is(err, boom) {
 		t.Errorf("expected error %v, got %v", boom, err)
 	}
-
+	if len(trace) != 1 {
+		t.Fatalf("expected one failed transition, got %d", len(trace))
+	}
+	if !errors.Is(trace[0].Err, boom) {
+		t.Errorf("expected transition error %v, got %v", boom, trace[0].Err)
+	}
 
 }
