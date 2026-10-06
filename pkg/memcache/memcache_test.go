@@ -89,6 +89,7 @@ func TestConcurrentAccessAcrrosShards(t *testing.T) {
 
 	for i := range goroutines {
 		go func(val int) {
+			defer wg.Done()
 			key := fmt.Sprintf("key-%d", val%50)
 			c.Set(key, val)
 			_, ok, err := c.Get(key)

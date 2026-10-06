@@ -29,7 +29,6 @@ type Cache[V any] struct {
 	ttl    time.Duration
 	now    func() time.Time
 	stop   chan struct{}
-	once   sync.Once
 	closed atomic.Bool
 }
 
@@ -139,13 +138,11 @@ func (c *Cache[V]) Len() int {
 }
 
 func (c *Cache[V]) Close() error {
-	if c.closed.Load() {
+	if !c.closed.CompareAndSwap(false, true) {
 		return ErrClosed
 	}
-	c.once.Do(func() {
-		c.closed.Store(true)
-		close(c.stop)
-	})
+
+	c.closed.Store(true)
 	return nil
 }
 
