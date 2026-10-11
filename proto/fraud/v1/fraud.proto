@@ -4,6 +4,33 @@ package fraud.v1;
 
 option go_package = "github.com/huncoding/payment-processor-course/proto/gen/go/fraud/v1;fraudv1";
 
+// Fraud service score payment attempts inside the synchrnous
+// authorization path.
 service FraudService {
-  // TODO: Define the Score RPC
+    rpc Score(ScoreRequest) returns (ScoreResponse);
+}
+
+enum Verdict {
+    VERDICT_UNSPECIFIED = 0;
+    VERDICT_APPROVE = 1;
+    VERDICT_DENY = 2;
+    VERDICT_MANUAL_REVIEW = 3;
+}
+
+message ScoreRequest {
+    string payment_id = 1;
+    string account_id = 2;
+    string card_fingerprint = 3;
+    int64 amount_cents = 4;
+    string currency = 5;
+    string client_p = 6;
+    string merchant_category = 7;
+    int64 occured_at_unix_ms = 8;
+}
+
+message ScoreResponse {
+    Verdict verdict = 1;
+    double risk_score = 2;
+    repeated string reasons = 3;
+    bool degraded = 4;
 }
