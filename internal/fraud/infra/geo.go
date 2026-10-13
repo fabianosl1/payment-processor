@@ -20,9 +20,14 @@ func NewStaticGeoResolver() *StaticGeoResolver {
 	return &StaticGeoResolver{}
 }
 
+// CountryCode uses a fixed country for offline development.
+func (r *StaticGeoResolver) CountryCode(_ context.Context, _ string) (string, error) {
+	return "BR", nil
+}
+
 type HTTPGeoResolver struct {
 	client *http.Client
-	cache *memcache.Cache[string]
+	cache  *memcache.Cache[string]
 }
 
 func NewHTTPGeoResolver() *HTTPGeoResolver {
@@ -30,8 +35,12 @@ func NewHTTPGeoResolver() *HTTPGeoResolver {
 		client: &http.Client{
 			Timeout: 3 * time.Second,
 		},
-		cache: memcache.New[string](6 * time.Hour, time.Hour),
+		cache: memcache.New[string](6*time.Hour, time.Hour),
 	}
+}
+
+func (r *HTTPGeoResolver) Close() error {
+	return r.cache.Close()
 }
 
 func (r *HTTPGeoResolver) CountryCode(ctx context.Context, ip string) (string, error) {
@@ -40,20 +49,18 @@ func (r *HTTPGeoResolver) CountryCode(ctx context.Context, ip string) (string, e
 	}
 
 	url := fmt.Sprintf("https://ipapi.co/%s/json", ip)
-	response, err := r.client.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("geo: failed to create request: %w", err)
 	}
-
-	defer response.Body.Close()
-
-	resp, err := r.client.Do(response.Request)
-	if  err != nil {
+	response, err := r.client.Do(req)
+	if err != nil {
 		return "", fmt.Errorf("geo: failed to get response: %w", err)
 	}
+	defer response.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("geo: unexpected status codfe: %d", resp.StatusCode)
+	if response.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("geo: unexpected status code: %d", response.StatusCode)
 	}
 
 	var body struct {
